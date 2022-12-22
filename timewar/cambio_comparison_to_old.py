@@ -70,10 +70,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-from cambio_utils import make_emissions_scenario_lte
-from cambio_utils import CreateClimateState
-from cambio_utils import CollectClimateTimeSeries
-from cambio import propagate_climate_state
+from cambio_utils_compare import (
+    make_emissions_scenario_lte,
+    CreateClimateState,
+    CollectClimateTimeSeries,
+    propagate_climate_state,
+)
 import preindustrial_inputs
 from climate_params import ClimateParams
 

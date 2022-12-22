@@ -50,7 +50,6 @@
 # a little more slowly in response to higher $CO_2$ levels in the atmosphere.
 #
 # ### How you're going to use Cambio3.1
-# Once you've gone through the activites prompted below, the idea is to:
 # Modify flags in propagate_climate_state. to activate a given feedback,
 # impact, or constraint of interest, or modifying parameters in the
 # climate_params dictionary, you'll run the entire notebook again from
@@ -70,8 +69,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-from cambio_utils import make_emissions_scenario_lte
-from cambio_utils import CreateClimateState
+from cambio_utils import make_emissions_scenario_lte, is_same
 from cambio import propagate_climate_state
 import preindustrial_inputs
 from climate_params import ClimateParams
@@ -91,13 +89,13 @@ from climate_params import ClimateParams
 
 # # # # # #     User inputs    # # # # #
 # For the LTE emissions maker
-SF_t_start = 1750
-SF_t_stop = 2200
-SF_nsteps = 1000
-SF_k = 0.025
-SF_t_trans = 2040  # pivot year to start decreasing CO2???
-SF_delta_t_trans = 20  # years over which to decrease co2
-SF_t_0 = 2020  # pivot year to start decreasing CO2???
+start_year = 1750.0
+stop_year = 2200.0
+dtime = 1.0  # time resolution (years)
+sf_k = 0.025
+SF_t_trans = 2040.0  # pivot year to start decreasing CO2???
+SF_delta_t_trans = 20.0  # years over which to decrease co2
+SF_t_0 = 2020.0  # pivot year to start decreasing CO2???
 SF_eps_0 = 11.3  # ???
 sf_long_term_emissions = 2  # ongoing carbon emissions after decarbonization
 # For feedbacks and stochastic runs
@@ -134,10 +132,10 @@ temp_conversion_fac = {"K": 1, "C": 273.15, "F": np.nan}
 # flux_human_atm is in GtC/year
 # would be good to output units
 time, flux_human_atm = make_emissions_scenario_lte(
-    SF_t_start,
-    SF_t_stop,
-    SF_nsteps,
-    SF_k,
+    start_year,
+    stop_year,
+    dtime,
+    sf_k,
     SF_eps_0,
     SF_t_0,
     SF_t_trans,
@@ -147,7 +145,6 @@ time, flux_human_atm = make_emissions_scenario_lte(
 
 
 # ### Creating a preindustrial Climate State
-# The cell below uses CreateClimateState to create a dictionary
 # containing the climate state containing preindustrial parameters.
 # We've set the starting year to what was specified above when you
 # created your scenario.
@@ -160,12 +157,31 @@ climateParams = ClimateParams(stochastic_c_atm_std_dev)
 climatestate_list = []
 
 # Make the starting state the preindustrial
-climatestate = CreateClimateState(climate_params)
+# ['C_atm', 'C_ocean', 'albedo', 'T_anomaly', 'pH',
+#  'T_C', 'T_F', 'F_ha', 'F_ao', 'F_oa', 'F_al', 'F_la']
 
+# Create an empty climate state
+ClimateState = {}
+# Fill in some default (preindustrial) values
+ClimateState["C_atm"] = climate_params["preindust_c_atm"]
+ClimateState["C_ocean"] = climate_params["preindust_c_ocean"]
+ClimateState["albedo"] = climate_params["preindust_albedo"]
+ClimateState["T_anomaly"] = 0
+# These are just placeholders (values don't mean anything)
+ClimateState["pH"] = 0
+ClimateState["T_C"] = 0
+ClimateState["T_F"] = 0
+ClimateState["F_ha"] = 0
+ClimateState["F_ao"] = 0
+ClimateState["F_oa"] = 0
+ClimateState["F_al"] = 0
+ClimateState["F_la"] = 0
+ClimateState["year"] = time[0] - dtime
+
+climatestate = ClimateState
 
 # Add some times
 # This sets the starting year the same as the scheduled flow
-climatestate["year"] = time[0]
 dt = time[1] - time[0]
 
 # Initialize the dictionary that will hold the time series
@@ -191,10 +207,10 @@ for i in range(len(time)):
 
 
 # QC: make sure the input and output times and human co2 emissions are same
-# if not is_same(time, climate["year"]):
-#     raise ValueError("The input and output times differ!")
-# if not is_same(flux_human_atm, climate["F_ha"]):
-#     raise ValueError("The input and output anthropogenic emissions differ!")
+if not is_same(time, climate["year"]):
+    raise ValueError("The input and output times differ!")
+if not is_same(flux_human_atm, climate["F_ha"]):
+    raise ValueError("The input and output anthropogenic emissions differ!")
 
 
 # # # #   Visualize the results of the run   # # # #

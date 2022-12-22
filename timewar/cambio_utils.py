@@ -6,52 +6,21 @@ Created on Wed Dec 21 15:49:24 2022
 @author: nesh
 
 By Steven Neshyba
-With modifications by Penny Rowe and Daniel Neshyba-Rowe
+Refactored by Penny Rowe and Daniel Neshyba-Rowe
 """
 from copy import deepcopy as makeacopy
 import numpy as np
 
 
-def is_same(arr1, arr2):
+def is_same(arr1: np.ndarray, arr2: np.ndarray) -> bool:
     """
     Throw an error if the two arrays are not the same
 
     @param arr1  First array
     @param arr2  Second array
-    @thrwos ValueError
+    @return  True if arrays are same, else false
     """
-    if len(arr1) != len(arr2) or not np.allclose(arr1, arr2):
-        raise ValueError("Failed QC: arrays differ!")
-
-
-def CreateClimateState(climate_params: dict):
-    """
-    Create a new climate state with default values (preindustrial)
-
-    @param ClimateParams
-    """
-
-    # Create an empty climate state
-    ClimateState = {}
-
-    # Fill in some default (preindustrial) values
-    ClimateState["C_atm"] = climate_params["preindust_c_atm"]
-    ClimateState["C_ocean"] = climate_params["preindust_c_ocean"]
-    ClimateState["albedo"] = climate_params["preindust_albedo"]
-    ClimateState["T_anomaly"] = 0
-
-    # These are just placeholders (values don't mean anything)
-    ClimateState["pH"] = 0
-    ClimateState["T_C"] = 0
-    ClimateState["T_F"] = 0
-    ClimateState["F_ha"] = 0
-    ClimateState["F_ao"] = 0
-    ClimateState["F_oa"] = 0
-    ClimateState["F_al"] = 0
-    ClimateState["F_la"] = 0
-
-    # Return the climate
-    return ClimateState
+    return len(arr1) == len(arr2) and np.allclose(arr1, arr2)
 
 
 def sigmafloor(t_in, t_transition, t_interval, floor):
@@ -150,35 +119,58 @@ def post_peak_flattener(time, eps, transitiontimeinterval, epslongterm):
 
 
 def make_emissions_scenario(
-    t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t_trans
+    time: np.ndarray,
+    inv_t_const: float,
+    eps_0: float,
+    t_0,
+    transitionyear,
+    transitionduration,
 ):
     """
     Make the emissions scenario
 
-    @param t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t_trans
-    @returns time
+    @param time  Time, in years
+    @param inv_t_const  Inverse time constant
+    @param eps_0,
+    @param t_0,
+    @param transitionyear  Transition time (years)
+    @param transitionduration  Transition time interval
     @returns eps
     """
-    time = np.linspace(t_start, t_stop, nsteps)
-    myexp = np.exp(k * time)
-    myN = eps_0 / (np.exp(k * t_0) * sigmadown(t_0, t_trans, delta_t_trans))
-    mysigmadown = sigmadown(time, t_trans, delta_t_trans)
-    eps = myN * myexp * mysigmadown
-    return time, eps
+    origsigmadown = sigmadown(t_0, transitionyear, transitionduration)
+    mysigmadown = sigmadown(time, transitionyear, transitionduration)
+
+    myexp = np.exp(time * inv_t_const)
+    origexp = np.exp(t_0 * inv_t_const) * origsigmadown
+
+    return eps_0 * myexp / origexp * mysigmadown
 
 
 def make_emissions_scenario_lte(
-    t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t, epslongterm
+    t_start: float,
+    t_stop: float,
+    dtime: float,
+    k: float,
+    eps_0: float,
+    t_0: float,
+    t_trans: float,
+    delta_t: float,
+    epslongterm: float,
 ):
     """
     Make emissions scenario with long term emissions
 
-    @param t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t_trans, epslongterm
+    @param t_start, t_stop, dtime
+    @param k
+    @param eps_0,
+    @param t_0
+    @param t_trans  Transition time (years)
+    @param delta_t_trans  Transition time interval
+    epslongterm
     @returns time
     @returns neweps
     """
-    time, eps = make_emissions_scenario(
-        t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t
-    )
+    time = np.arange(t_start, t_stop, dtime)
+    eps = make_emissions_scenario(time, k, eps_0, t_0, t_trans, delta_t)
     neweps = post_peak_flattener(time, eps, delta_t, epslongterm)
     return time, neweps
