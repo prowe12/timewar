@@ -92,12 +92,10 @@ from climate_params import ClimateParams
 start_year = 1750.0
 stop_year = 2200.0
 dtime = 1.0  # time resolution (years)
-sf_k = 0.025
-SF_t_trans = 2040.0  # pivot year to start decreasing CO2???
-SF_delta_t_trans = 20.0  # years over which to decrease co2
-SF_t_0 = 2020.0  # pivot year to start decreasing CO2???
-SF_eps_0 = 11.3  # ???
-sf_long_term_emissions = 2  # ongoing carbon emissions after decarbonization
+inv_time_constant = 0.025
+transition_year = 2040.0  # pivot year to start decreasing CO2
+transition_duration = 20.0  # years over which to decrease co2
+long_term_emissions = 2.0  # ongoing carbon emissions after decarbonization
 # For feedbacks and stochastic runs
 stochastic_c_atm_std_dev = 0.1
 albedo_with_no_constraint = False
@@ -135,12 +133,10 @@ time, flux_human_atm = make_emissions_scenario_lte(
     start_year,
     stop_year,
     dtime,
-    sf_k,
-    SF_eps_0,
-    SF_t_0,
-    SF_t_trans,
-    SF_delta_t_trans,
-    sf_long_term_emissions,
+    inv_time_constant,
+    transition_year,
+    transition_duration,
+    long_term_emissions,
 )
 
 
@@ -153,36 +149,26 @@ climateParams = ClimateParams(stochastic_c_atm_std_dev)
 
 
 # Propagating through time
-# Initialize our list of climate states
-climatestate_list = []
 
 # Make the starting state the preindustrial
-# ['C_atm', 'C_ocean', 'albedo', 'T_anomaly', 'pH',
-#  'T_C', 'T_F', 'F_ha', 'F_ao', 'F_oa', 'F_al', 'F_la']
-
 # Create an empty climate state
-ClimateState = {}
+climatestate = {}
 # Fill in some default (preindustrial) values
-ClimateState["C_atm"] = climate_params["preindust_c_atm"]
-ClimateState["C_ocean"] = climate_params["preindust_c_ocean"]
-ClimateState["albedo"] = climate_params["preindust_albedo"]
-ClimateState["T_anomaly"] = 0
+climatestate["C_atm"] = climate_params["preindust_c_atm"]
+climatestate["C_ocean"] = climate_params["preindust_c_ocean"]
+climatestate["albedo"] = climate_params["preindust_albedo"]
+climatestate["T_anomaly"] = 0
 # These are just placeholders (values don't mean anything)
-ClimateState["pH"] = 0
-ClimateState["T_C"] = 0
-ClimateState["T_F"] = 0
-ClimateState["F_ha"] = 0
-ClimateState["F_ao"] = 0
-ClimateState["F_oa"] = 0
-ClimateState["F_al"] = 0
-ClimateState["F_la"] = 0
-ClimateState["year"] = time[0] - dtime
+climatestate["pH"] = 0
+climatestate["T_C"] = 0
+climatestate["T_F"] = 0
+climatestate["F_ha"] = 0
+climatestate["F_ao"] = 0
+climatestate["F_oa"] = 0
+climatestate["F_al"] = 0
+climatestate["F_la"] = 0
+climatestate["year"] = time[0] - dtime
 
-climatestate = ClimateState
-
-# Add some times
-# This sets the starting year the same as the scheduled flow
-dt = time[1] - time[0]
 
 # Initialize the dictionary that will hold the time series
 ntimes = len(time)
@@ -196,12 +182,10 @@ for i in range(len(time)):
 
     # Propagate
     climatestate = propagate_climate_state(
-        climatestate, climateParams, dtime=dt, F_ha=flux_human_atm[i]
+        climatestate, climateParams, dtime, F_ha=flux_human_atm[i]
     )
 
-    # Add to our list of climate states
-    climatestate_list.append(climatestate)
-
+    # Append to climate variables
     for key in climatestate:
         climate[key][i] = climatestate[key]
 
@@ -215,7 +199,6 @@ if not is_same(flux_human_atm, climate["F_ha"]):
 
 # # # #   Visualize the results of the run   # # # #
 # Plotting parameters:
-linewidth = 2
 lwidth = 2
 
 # Plot Anthropogenic emissions in GtC/year
@@ -269,7 +252,7 @@ labels = ["Albedo"]
 plt.figure()
 for i, varname in enumerate(plot_me):
     yval = climate[varname]
-    plt.plot(time, yval, label=f"{labels[i]}", linewidth=linewidth)
+    plt.plot(time, yval, label=f"{labels[i]}", linewidth=lwidth)
 plt.grid(True)
 plt.xlabel("time (years)")
 plt.ylabel("albedo")
@@ -283,7 +266,7 @@ plt.ylim([ybottom, ytop])
 varname = "pH"
 yval = climate[varname]
 plt.figure()
-plt.plot(time, yval, label="pH", linewidth=linewidth, color="gray")
+plt.plot(time, yval, label="pH", linewidth=lwidth, color="gray")
 plt.grid(True)
 plt.xlabel("time (years)")
 plt.ylabel(varname)
@@ -300,7 +283,7 @@ varname = "T_anomaly"
 yval = climate[varname]
 label = "Temperature anomaly"
 plt.figure()
-plt.plot(time, yval, label=label, linewidth=linewidth, color="red")
+plt.plot(time, yval, label=label, linewidth=lwidth, color="red")
 plt.grid(True)
 plt.xlabel("time (years)")
 plt.ylabel("degrees K")

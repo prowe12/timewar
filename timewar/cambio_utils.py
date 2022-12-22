@@ -59,19 +59,6 @@ def sigmadown(t_in, transitiontime, transitiontimeinterval):
     return 1 - sigmaup(t_in, transitiontime, transitiontimeinterval)
 
 
-def CollectClimateTimeSeries(climatestate_list, whatIwant):
-    """
-    Collect elements from a list of dictionaries
-
-    @param ClimateState_list
-    @param whatIwant
-    """
-    array = np.empty(0)
-    for climstate in climatestate_list:
-        array = np.append(array, climstate[whatIwant])
-    return array
-
-
 def Diagnose_actual_temperature(T_anomaly):
     """
     Compute degrees C from a temperature anomaly
@@ -121,22 +108,21 @@ def post_peak_flattener(time, eps, transitiontimeinterval, epslongterm):
 def make_emissions_scenario(
     time: np.ndarray,
     inv_t_const: float,
-    eps_0: float,
-    t_0,
-    transitionyear,
-    transitionduration,
+    transitionyear: float,
+    transitionduration: float,
 ):
     """
     Make the emissions scenario
 
     @param time  Time, in years
     @param inv_t_const  Inverse time constant
-    @param eps_0,
-    @param t_0,
     @param transitionyear  Transition time (years)
     @param transitionduration  Transition time interval
     @returns eps
     """
+    t_0 = 2020.0  # year for normalizing co2 emission
+    eps_0 = 11.3  # co2 emission normalization value
+
     origsigmadown = sigmadown(t_0, transitionyear, transitionduration)
     mysigmadown = sigmadown(time, transitionyear, transitionduration)
 
@@ -151,8 +137,6 @@ def make_emissions_scenario_lte(
     t_stop: float,
     dtime: float,
     k: float,
-    eps_0: float,
-    t_0: float,
     t_trans: float,
     delta_t: float,
     epslongterm: float,
@@ -162,15 +146,13 @@ def make_emissions_scenario_lte(
 
     @param t_start, t_stop, dtime
     @param k
-    @param eps_0,
-    @param t_0
     @param t_trans  Transition time (years)
     @param delta_t_trans  Transition time interval
-    epslongterm
+    @param epslongterm  Long term CO2 emissions
     @returns time
-    @returns neweps
+    @returns neweps  Anthropogenic CO2 emissions, with time
     """
     time = np.arange(t_start, t_stop, dtime)
-    eps = make_emissions_scenario(time, k, eps_0, t_0, t_trans, delta_t)
+    eps = make_emissions_scenario(time, k, t_trans, delta_t)
     neweps = post_peak_flattener(time, eps, delta_t, epslongterm)
     return time, neweps
