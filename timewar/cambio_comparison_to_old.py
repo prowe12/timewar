@@ -72,6 +72,7 @@ import numpy as np
 
 from cambio_utils import make_emissions_scenario_lte
 from cambio_utils import CreateClimateState
+from cambio_utils import CollectClimateTimeSeries
 from cambio import propagate_climate_state
 import preindustrial_inputs
 from climate_params import ClimateParams
@@ -88,6 +89,8 @@ from climate_params import ClimateParams
 #
 # After generating the scenario, we plot the emissions in GtC/year, and again in GtCO2/year, by dividing by 0.27; the latter is so that we can compare to other models, like EnROADS, which use GtCO2.
 
+# Debugging flags:
+compare_to_stevens_plots = True
 
 # # # # # #     User inputs    # # # # #
 # For the LTE emissions maker
@@ -202,113 +205,202 @@ for i in range(len(time)):
 linewidth = 2
 lwidth = 2
 
-# Plot Anthropogenic emissions in GtC/year
-c_units = "GtC"  # GtC, GtCO2, atm
-flux_type = "/year"  # total, per year
-yvals = [flux_human_atm]
-lables = ["Anthropogenic Emissions"]
-plt.figure()
-for i, yval in enumerate(yvals):
-    plt.plot(time, yval * c_conversion_fac[c_units], label=lables[i])
-plt.legend()
-plt.grid(True)
-plt.xlabel("year")
-plt.ylabel(c_units + flux_type)
+if compare_to_stevens_plots:
+    # Create Steven's original plots
+    # Plot Anthropogenic emissions in GtC/year
+    c_units = "GtC"  # GtC, GtCO2, atm
+    flux_type = "/year"  # total, per year
+    yvals = [flux_human_atm]
+    lables = ["Anthropogenic Emissions"]
+    plt.figure()
+    for i, yval in enumerate(yvals):
+        plt.plot(time, yval * c_conversion_fac[c_units], label=lables[i])
+    plt.legend()
+    plt.grid(True)
+    plt.xlabel("year")
+    plt.ylabel(c_units + flux_type)
 
-# Plot the concentration of carbon in the atmosphere and oceans,
-# in GtC (one graph)
-c_units = "GtC"
-plot_me = ["C_atm", "C_ocean"]
-labels = ["C_atm", "C_ocean"]
-flux_type = ""
-plt.figure()
-for i, varname in enumerate(plot_me):
-    label = f"{labels[i]} ({c_units})"
-    yval = climate[varname] * c_conversion_fac[c_units]
-    plt.plot(time, yval, label=label, linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(c_units + flux_type)
-plt.legend()
+    # Extract and plot the concentration of carbon in the atmosphere and oceans,
+    # in GtC (one graph)
+    # Old way
+    plt.figure()
+    C_atm_array = CollectClimateTimeSeries(climatestate_list, "C_atm")
+    C_ocean_array = CollectClimateTimeSeries(climatestate_list, "C_ocean")
+    plt.plot(time, C_atm_array, label="[C_atm](GtC)", linewidth=lwidth)
+    plt.plot(time, C_ocean_array, label="C_ocean(GtC)", linewidth=lwidth)
+    plt.legend()
+    # New way
+    c_units = "GtC"
+    plot_me = ["C_atm", "C_ocean"]
+    labels = ["C_atm", "C_ocean"]
+    flux_type = ""
+    plt.figure()
+    for i, varname in enumerate(plot_me):
+        label = f"{labels[i]} ({c_units})"
+        yval = climate[varname] * c_conversion_fac[c_units]
+        plt.plot(time, yval, label=label, linewidth=lwidth)
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel(c_units + flux_type)
+    plt.legend()
 
-# Re-plot the carbon in the atmosphere, converted to ppm (by dividing
-# C_atm_array by 2.12)
-c_units = "ppm"
-plot_me = ["C_atm"]
-labels = ["C_atm"]
-flux_type = ""
-plt.figure()
-for i, varname in enumerate(plot_me):
-    yval = climate[varname] * c_conversion_fac[c_units]
-    label = f"{labels[i]} ({c_units})"
-    plt.plot(time, yval, label=label, linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(c_units + flux_type)
-plt.legend()
+    # Re-plot the carbon in the atmosphere, converted to ppm (by dividing
+    # C_atm_array by 2.12)
+    # Old way
+    C_atm_array = CollectClimateTimeSeries(climatestate_list, "C_atm")
+    plt.figure()
+    plt.plot(time, C_atm_array / 2.12, label="[C_atm](ppm)", linewidth=lwidth)
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel("ppm")
+    plt.legend()
+    # New way
+    c_units = "ppm"
+    plot_me = ["C_atm"]
+    labels = ["C_atm"]
+    flux_type = ""
+    plt.figure()
+    for i, varname in enumerate(plot_me):
+        yval = climate[varname] * c_conversion_fac[c_units]
+        label = f"{labels[i]} ({c_units})"
+        plt.plot(time, yval, label=label, linewidth=lwidth)
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel(c_units + flux_type)
+    plt.legend()
 
-# Extract and plot the albedo
-plot_me = ["albedo"]
-labels = ["Albedo"]
-plt.figure()
-for i, varname in enumerate(plot_me):
-    yval = climate[varname]
-    plt.plot(time, yval, label=f"{labels[i]}", linewidth=linewidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel("albedo")
-plt.legend()
-# TODO: Find a better solution for this
-ybottom = yval[0] * climate_params["fractional_albedo_floor"] - 0.01
-ytop = yval[0] + 0.001
-plt.ylim([ybottom, ytop])
-
-# plot the ocean pH, specifying vertical axis limits of 7.8 to 8.3
-varname = "pH"
-yval = climate[varname]
-plt.figure()
-plt.plot(time, yval, label="pH", linewidth=linewidth, color="gray")
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(varname)
-plt.legend()
-# TODO: Find a better way to set the ylims
-ybottom = 7.8
-ytop = 8.3
-plt.ylim([ybottom, ytop])
-
-# TODO: Fix the way colors are handled
-
-# Extract and plot the temperature anomaly
-varname = "T_anomaly"
-yval = climate[varname]
-label = "Temperature anomaly"
-plt.figure()
-plt.plot(time, yval, label=label, linewidth=linewidth, color="red")
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel("degrees K")
-plt.legend()
-
-# Extract the fluxes, compute net fluxes, and plot them
-plot_flux_diffs = True  # True, False
-plot_me = ["F_ha", "F_oa", "F_la"]
-labels = ["F_ha", "F_la-F_al", "F_oa-F_ao"]
-colors = ["black", "brown", "blue"]
-if plot_flux_diffs:
-    ylabel = "Flux differences (GtC/year)"
-else:
-    raise ValueError("option not here yet")
-plt.figure()
-for i, varname in enumerate(plot_me):
-    if plot_flux_diffs and varname == "F_oa":
-        yval = -climate["F_ao"] + climate["F_oa"]
-    elif plot_flux_diffs and varname == "F_la":
-        yval = -climate["F_al"] + climate["F_la"]
-    else:
+    # Extract and plot the albedo
+    # Old way
+    albedo_array = CollectClimateTimeSeries(climatestate_list, "albedo")
+    plt.figure()
+    plt.plot(time, albedo_array, label="albedo", linewidth=2)
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel("albedo")
+    plt.legend()
+    ybottom = (
+        albedo_array[0] * climate_params["fractional_albedo_floor"] - 0.01
+    )
+    ytop = albedo_array[0] + 0.001
+    plt.ylim([ybottom, ytop])
+    # New way
+    plot_me = ["albedo"]
+    labels = ["Albedo"]
+    plt.figure()
+    for i, varname in enumerate(plot_me):
         yval = climate[varname]
-    plt.plot(time, yval, label=labels[i], color=colors[i], linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(ylabel)
-plt.legend()
+        plt.plot(time, yval, label=f"{labels[i]}", linewidth=linewidth)
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel("albedo")
+    plt.legend()
+    # TODO: Find a better solution for this
+    ybottom = (
+        albedo_array[0] * climate_params["fractional_albedo_floor"] - 0.01
+    )
+    ytop = albedo_array[0] + 0.001
+    plt.ylim([ybottom, ytop])
+
+    # Extract and plot the ocean pH, specifying vertical axis limits of 7.8 to 8.3
+    # Old way
+    ph_array = CollectClimateTimeSeries(climatestate_list, "pH")
+    plt.figure()
+    plt.plot(time, ph_array, label="pH", linewidth=linewidth, color="gray")
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.legend()
+    # TODO: Find a better way to set the ylims
+    ybottom = 7.8
+    ytop = 8.3
+    plt.ylim([ybottom, ytop])
+    # New way
+    varname = "pH"
+    yval = climate[varname]
+    plt.figure()
+    plt.plot(time, yval, label="pH", linewidth=linewidth, color="gray")
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel(varname)
+    plt.legend()
+    # TODO: Find a better way to set the ylims
+    ybottom = 7.8
+    ytop = 8.3
+    plt.ylim([ybottom, ytop])
+
+    # TODO: Fix the way colors are handled
+
+    # Extract and plot the temperature anomaly
+    # Old way
+    temp = CollectClimateTimeSeries(climatestate_list, "T_anomaly")
+    label = "Temperature anomaly"
+    plt.figure()
+    plt.plot(time, temp, label=label, linewidth=linewidth, color="red")
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel("degrees K")
+    plt.legend()
+    # New way
+    varname = "T_anomaly"
+    yval = climate[varname]
+    label = "Temperature anomaly"
+    plt.figure()
+    plt.plot(time, yval, label=label, linewidth=linewidth, color="red")
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel("degrees K")
+    plt.legend()
+
+    # Extract the fluxes, compute net fluxes, and plot them
+    F_al_array = CollectClimateTimeSeries(climatestate_list, "F_al")
+    F_la_array = CollectClimateTimeSeries(climatestate_list, "F_la")
+    F_ao_array = CollectClimateTimeSeries(climatestate_list, "F_ao")
+    F_oa_array = CollectClimateTimeSeries(climatestate_list, "F_oa")
+    F_ha_array = CollectClimateTimeSeries(climatestate_list, "F_ha")
+    plt.figure()
+    # fontsize=12
+    # plt.rcParams.update({'font.size': fontsize})
+    plt.plot(
+        time, F_ha_array, label="F_ha", color="black", linewidth=linewidth
+    )
+    plt.plot(
+        time,
+        -F_al_array + F_la_array,
+        label="F_la-F_al",
+        color="brown",
+        linewidth=linewidth,
+    )
+    plt.plot(
+        time,
+        -F_ao_array + F_oa_array,
+        label="F_oa-F_ao",
+        color="blue",
+        linewidth=linewidth,
+    )
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel("Flux differences (GtC/year)")
+    plt.legend()
+    # New way
+    plot_flux_diffs = True  # True, False
+    plot_me = ["F_ha", "F_oa", "F_la"]
+    labels = ["F_ha", "F_la-F_al", "F_oa-F_ao"]
+    colors = ["black", "brown", "blue"]
+    if plot_flux_diffs:
+        ylabel = "Flux differences (GtC/year)"
+    else:
+        raise ValueError("option not here yet")
+    plt.figure()
+    for i, varname in enumerate(plot_me):
+        if plot_flux_diffs and varname == "F_oa":
+            yval = -climate["F_ao"] + climate["F_oa"]
+        elif plot_flux_diffs and varname == "F_la":
+            yval = -climate["F_al"] + climate["F_la"]
+        else:
+            yval = climate[varname]
+        plt.plot(
+            time, yval, label=labels[i], color=colors[i], linewidth=lwidth
+        )
+    plt.grid(True)
+    plt.xlabel("time (years)")
+    plt.ylabel(ylabel)
+    plt.legend()

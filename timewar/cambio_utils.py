@@ -129,7 +129,7 @@ def Diagnose_degreesF(T_C):
     return T_F
 
 
-def PostPeakFlattener(time, eps, transitiontimeinterval, epslongterm):
+def post_peak_flattener(time, eps, transitiontimeinterval, epslongterm):
     """
     Flatten the post peak
 
@@ -171,7 +171,7 @@ def make_emissions_scenario_lte(
     t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t, epslongterm
 ):
     """
-    Make emissions scenario LTE
+    Make emissions scenario with long term emissions
 
     @param t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t_trans, epslongterm
     @returns time
@@ -180,5 +180,5 @@ def make_emissions_scenario_lte(
     time, eps = make_emissions_scenario(
         t_start, t_stop, nsteps, k, eps_0, t_0, t_trans, delta_t
     )
-    neweps = PostPeakFlattener(time, eps, delta_t, epslongterm)
+    neweps = post_peak_flattener(time, eps, delta_t, epslongterm)
     return time, neweps
