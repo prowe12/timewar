@@ -78,10 +78,13 @@ from climate_params import ClimateParams
 
 
 # ### Introducing the "LTE" emissions scenario maker
-# Here we introduce a new emissions scenario maker. A few differences with respect to what we have done previously are:
+# The emissions scenario maker.
 #
-# 1. This is done "on the fly" -- i.e., it's a function call to "make_emissions_scenario_lte". So there's no need to generate a separate scheduled flows file!
-# 2. LTE stands for "long-term-emissions." That's specified by the last parameter, SF_LTE. In the cell below, we specify 10 GtC as a default, but it can be anything (even negative). If you want to reproduce our original, more or less, you can specify SF_LTE=0.
+# 1. This is a function call to "make_emissions_scenario_lte".
+# 2. LTE stands for "long-term-emissions." That's specified by SF_LTE.
+#    In the cell below, we specify 10 GtC as a default, but it can be
+#    anything (even negative). If you want to reproduce our original,
+#    more or less, you can specify SF_LTE=0.
 #
 # After generating the scenario, we plot the emissions in GtC/year, and again in GtCO2/year, by dividing by 0.27; the latter is so that we can compare to other models, like EnROADS, which use GtCO2.
 
@@ -95,7 +98,7 @@ from climate_params import ClimateParams
 # SF_delta_t_trans = 20
 # SF_t_0 = 2020
 # SF_eps_0 = 11.3
-# SF_LTE = 10
+# sf_long_term_emissions = 10
 
 # # Calling the LTE emissions scenario maker
 # time, eps = make_emissions_scenario_lte(
@@ -107,7 +110,7 @@ from climate_params import ClimateParams
 #     SF_t_0,
 #     SF_t_trans,
 #     SF_delta_t_trans,
-#     SF_LTE,
+#     sf_long_term_emissions,
 # )
 
 # # Plot Anthropogenic Emissions in units GtC/year
@@ -127,15 +130,7 @@ from climate_params import ClimateParams
 # plt.ylabel("GtCO2/year")
 
 
-# ### Your turn
-# Repeat what we did in the cell above, but change parameters to a scenario
-# more to your liking. You might, for example, want a decarbonization
-# transition take place in the year 2040 instead of 2050, or
-# set the long-term emissions to a lower value, or stop in year 2200
-# rather than 2100 (your choice).
-
-
-# User inputs
+# # # # # #     User inputs    # # # # #
 # For the LTE emissions maker
 SF_t_start = 1750
 SF_t_stop = 2200
@@ -145,13 +140,21 @@ SF_t_trans = 2040  # pivot year to start decreasing CO2???
 SF_delta_t_trans = 20  # years over which to decrease co2
 SF_t_0 = 2020  # pivot year to start decreasing CO2???
 SF_eps_0 = 11.3  # ???
-SF_LTE = 2  # ???
+sf_long_term_emissions = 2  # ongoing carbon emissions after decarbonization
 # For feedbacks and stochastic runs
 stochastic_c_atm_std_dev = 0.1
 albedo_with_no_constraint = False
 albedo_feedback = False
 stochastic_C_atm = False
 temp_anomaly_feedback = False
+# Units
+temp_units = "F"  # F, C, or K
+c_units = "GtC"  # GtC, or GtCO2
+# # # # # #  # # # # # # # # # # # #
+
+
+# Unit conversions
+c_conversion_fac = {"GtC": 1, "GtCO2": 1 / 0.27}  # from GtC
 
 
 # Call the LTE emissions scenario maker with these parameters
@@ -164,70 +167,41 @@ time, flux_human_atm = make_emissions_scenario_lte(
     SF_t_0,
     SF_t_trans,
     SF_delta_t_trans,
-    SF_LTE,
+    sf_long_term_emissions,
 )
-
-# Plot it in units GtC/year
-plt.figure()
-plt.plot(time, flux_human_atm)
-plt.grid(True)
-plt.title("Anthropogenic Emissions w/LTE")
-plt.xlabel("year")
-plt.ylabel("GtC/year")
-
-# Also plot in GtCO2/year
-plt.figure()
-plt.plot(time, flux_human_atm / 0.27)
-plt.grid(True)
-plt.title("Anthropogenic Emissions w/LTE")
-plt.xlabel("year")
-plt.ylabel("GtCO2/year")
 
 
 # ### Creating a preindustrial Climate State
-# The cell below uses CreateClimateState to create a climate state called
-# *PreindustClimateState*, containing preindustrial parameters.
+# The cell below uses CreateClimateState to create a dictionary
+# containing the climate state containing preindustrial parameters.
 # We've set the starting year to what was specified above when you
 # created your scenario.
-
 climate_params = preindustrial_inputs.climate_params
 climateParams = ClimateParams(stochastic_c_atm_std_dev)
 
-# Create a starting state -- the default is a preindustrial state
-# PreindustClimateState = CreateClimateState(climate_params)
-
-# Specify the starting year
-# PreindustClimateState["year"] = SF_t_start
-
-# Display the state
-# display(PreindustClimateState)
-# print(PreindustClimateState)
-
 
 # Propagating through time
-
-
 # Initialize our list of climate states
-ClimateState_list = []
+climatestate_list = []
 
 # Make the starting state the preindustrial
-ClimateState = CreateClimateState(climate_params)
+climatestate = CreateClimateState(climate_params)
 
 # Add some times
 # This sets the starting year the same as the scheduled flow
-ClimateState["year"] = time[0]
+climatestate["year"] = time[0]
 dt = time[1] - time[0]
 
 # Loop over all the times in the scheduled flow
 for i in range(len(time)):
 
     # Propagate
-    ClimateState = propagate_climate_state(
-        ClimateState, climateParams, dtime=dt, F_ha=flux_human_atm[i]
+    climatestate = propagate_climate_state(
+        climatestate, climateParams, dtime=dt, F_ha=flux_human_atm[i]
     )
 
     # Add to our list of climate states
-    ClimateState_list.append(ClimateState)
+    climatestate_list.append(climatestate)
 
 
 # ### Visualizing the results of the run
@@ -238,11 +212,19 @@ for i in range(len(time)):
 # a little better.
 
 
-# Here we are extracting the times from ClimateState_list
-time = CollectClimateTimeSeries(ClimateState_list, "year")
+# Plot the Anthropogenic emissions
+plt.figure()
+plt.plot(time, flux_human_atm * c_conversion_fac[c_units])
+plt.grid(True)
+plt.title("Anthropogenic Emissions")
+plt.xlabel("year")
+plt.ylabel(c_units + "/year")
+
+# Here we are extracting the times from climatestate_list
+time = CollectClimateTimeSeries(climatestate_list, "year")
 
 # Extract and plot the albedo
-albedo_array = CollectClimateTimeSeries(ClimateState_list, "albedo")
+albedo_array = CollectClimateTimeSeries(climatestate_list, "albedo")
 
 plt.figure()
 plt.plot(time, albedo_array, label="albedo", linewidth=2)
@@ -255,13 +237,8 @@ ytop = albedo_array[0] + 0.001
 plt.ylim([ybottom, ytop])
 
 
-# ### Your turn
-# Do some similar reporting to what you just did, but for other variables,
-# as prompted. You can, of course, add other plots!
-
-
 # Extract and plot the ocean pH, specifying vertical axis limits of 7.8 to 8.3
-T_array = CollectClimateTimeSeries(ClimateState_list, "pH")
+T_array = CollectClimateTimeSeries(climatestate_list, "pH")
 plt.figure()
 linewidth = 2
 plt.plot(time, T_array, label="pH", linewidth=linewidth, color="gray")
@@ -275,8 +252,8 @@ plt.ylim([ybottom, ytop])
 
 # Extract and plot the concentration of carbon in the atmosphere and oceans,
 # in GtC (one graph)
-C_atm_array = CollectClimateTimeSeries(ClimateState_list, "C_atm")
-C_ocean_array = CollectClimateTimeSeries(ClimateState_list, "C_ocean")
+C_atm_array = CollectClimateTimeSeries(climatestate_list, "C_atm")
+C_ocean_array = CollectClimateTimeSeries(climatestate_list, "C_ocean")
 plt.figure()
 plt.plot(time, C_atm_array, label="[C_atm](GtC)", linewidth=linewidth)
 plt.plot(time, C_ocean_array, label="C_ocean(GtC)", linewidth=linewidth)
@@ -296,8 +273,7 @@ plt.legend()
 
 
 # Extract and plot the temperature anomaly
-### BEGIN SOLUTION
-T_array = CollectClimateTimeSeries(ClimateState_list, "T_anomaly")
+T_array = CollectClimateTimeSeries(climatestate_list, "T_anomaly")
 plt.figure()
 plt.plot(
     time,
@@ -310,16 +286,14 @@ plt.grid(True)
 plt.xlabel("time (years)")
 plt.ylabel("degrees K")
 plt.legend()
-### END SOLUTION
 
 
 # Extract the fluxes, compute net fluxes, and plot them
-### BEGIN SOLUTION
-F_al_array = CollectClimateTimeSeries(ClimateState_list, "F_al")
-F_la_array = CollectClimateTimeSeries(ClimateState_list, "F_la")
-F_ao_array = CollectClimateTimeSeries(ClimateState_list, "F_ao")
-F_oa_array = CollectClimateTimeSeries(ClimateState_list, "F_oa")
-F_ha_array = CollectClimateTimeSeries(ClimateState_list, "F_ha")
+F_al_array = CollectClimateTimeSeries(climatestate_list, "F_al")
+F_la_array = CollectClimateTimeSeries(climatestate_list, "F_la")
+F_ao_array = CollectClimateTimeSeries(climatestate_list, "F_ao")
+F_oa_array = CollectClimateTimeSeries(climatestate_list, "F_oa")
+F_ha_array = CollectClimateTimeSeries(climatestate_list, "F_ha")
 plt.figure()
 # fontsize=12
 # plt.rcParams.update({'font.size': fontsize})
@@ -342,11 +316,3 @@ plt.grid(True)
 plt.xlabel("time (years)")
 plt.ylabel("Flux differences (GtC/year)")
 plt.legend()
-### END SOLUTION
-
-
-# ### Refresh/save/validate
-# Double-check everything is OK, and press the "Validate" button (as usual).
-#
-# ### Close/submit/logout
-# Close, submit, and log out.
