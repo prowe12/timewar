@@ -74,14 +74,14 @@ from cambio_utils import CreateClimateState
 from cambio_utils import CollectClimateTimeSeries
 from cambio import propagate_climate_state
 import preindustrial_inputs
-from Params import Params
+from climate_params import ClimateParams
 
 
 # ### Introducing the "LTE" emissions scenario maker
 # Here we introduce a new emissions scenario maker. A few differences with respect to what we have done previously are:
 #
 # 1. This is done "on the fly" -- i.e., it's a function call to "make_emissions_scenario_lte". So there's no need to generate a separate scheduled flows file!
-# 1. LTE stands for "long-term-emissions." That's specified by the last parameter, SF_LTE. In the cell below, we specify 10 GtC as a default, but it can be anything (even negative). If you want to reproduce our original, more or less, you can specify SF_LTE=0.
+# 2. LTE stands for "long-term-emissions." That's specified by the last parameter, SF_LTE. In the cell below, we specify 10 GtC as a default, but it can be anything (even negative). If you want to reproduce our original, more or less, you can specify SF_LTE=0.
 #
 # After generating the scenario, we plot the emissions in GtC/year, and again in GtCO2/year, by dividing by 0.27; the latter is so that we can compare to other models, like EnROADS, which use GtCO2.
 
@@ -135,19 +135,27 @@ from Params import Params
 # rather than 2100 (your choice).
 
 
-# Your parameters for the LTE emissions maker
+# User inputs
+# For the LTE emissions maker
 SF_t_start = 1750
 SF_t_stop = 2200
 SF_nsteps = 1000
 SF_k = 0.025
-SF_t_trans = 2040
-SF_delta_t_trans = 20
-SF_t_0 = 2020
-SF_eps_0 = 11.3
-SF_LTE = 2
+SF_t_trans = 2040  # pivot year to start decreasing CO2???
+SF_delta_t_trans = 20  # years over which to decrease co2
+SF_t_0 = 2020  # pivot year to start decreasing CO2???
+SF_eps_0 = 11.3  # ???
+SF_LTE = 2  # ???
+# For feedbacks and stochastic runs
+stochastic_c_atm_std_dev = 0.1
+albedo_with_no_constraint = False
+albedo_feedback = False
+stochastic_C_atm = False
+temp_anomaly_feedback = False
+
 
 # Call the LTE emissions scenario maker with these parameters
-time, eps = make_emissions_scenario_lte(
+time, flux_human_atm = make_emissions_scenario_lte(
     SF_t_start,
     SF_t_stop,
     SF_nsteps,
@@ -159,21 +167,21 @@ time, eps = make_emissions_scenario_lte(
     SF_LTE,
 )
 
-# # Plot it in units GtC/year
-# plt.figure()
-# plt.plot(time, eps)
-# plt.grid(True)
-# plt.title("Anthropogenic Emissions w/LTE")
-# plt.xlabel("year")
-# plt.ylabel("GtC/year")
+# Plot it in units GtC/year
+plt.figure()
+plt.plot(time, flux_human_atm)
+plt.grid(True)
+plt.title("Anthropogenic Emissions w/LTE")
+plt.xlabel("year")
+plt.ylabel("GtC/year")
 
-# # Also plot in GtCO2/year
-# plt.figure()
-# plt.plot(time, eps / 0.27)
-# plt.grid(True)
-# plt.title("Anthropogenic Emissions w/LTE")
-# plt.xlabel("year")
-# plt.ylabel("GtCO2/year")
+# Also plot in GtCO2/year
+plt.figure()
+plt.plot(time, flux_human_atm / 0.27)
+plt.grid(True)
+plt.title("Anthropogenic Emissions w/LTE")
+plt.xlabel("year")
+plt.ylabel("GtCO2/year")
 
 
 # ### Creating a preindustrial Climate State
@@ -183,17 +191,17 @@ time, eps = make_emissions_scenario_lte(
 # created your scenario.
 
 climate_params = preindustrial_inputs.climate_params
-params = Params()
+climateParams = ClimateParams(stochastic_c_atm_std_dev)
 
 # Create a starting state -- the default is a preindustrial state
-PreindustClimateState = CreateClimateState(climate_params)
+# PreindustClimateState = CreateClimateState(climate_params)
 
 # Specify the starting year
-PreindustClimateState["year"] = SF_t_start
+# PreindustClimateState["year"] = SF_t_start
 
 # Display the state
 # display(PreindustClimateState)
-print(PreindustClimateState)
+# print(PreindustClimateState)
 
 
 # Propagating through time
@@ -215,7 +223,7 @@ for i in range(len(time)):
 
     # Propagate
     ClimateState = propagate_climate_state(
-        ClimateState, params, climate_params, dtime=dt, F_ha=eps[i]
+        ClimateState, climateParams, dtime=dt, F_ha=flux_human_atm[i]
     )
 
     # Add to our list of climate states
