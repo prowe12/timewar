@@ -176,17 +176,17 @@ def propagate_climate_state(
     ClimateState = makeacopy(prevClimateState)
     ClimateState["C_atm"] = c_atm
     ClimateState["C_ocean"] = c_ocean
-    ClimateState["F_oa"] = F_oa
-    ClimateState["F_ao"] = F_ao
-    ClimateState["F_la"] = F_la
-    ClimateState["F_al"] = F_al
-    ClimateState["year"] += dtime
-    ClimateState["F_ha"] = F_ha
+    ClimateState["albedo"] = albedo
     ClimateState["T_anomaly"] = T_anomaly
     ClimateState["pH"] = pH
     ClimateState["T_C"] = T_C
     ClimateState["T_F"] = T_F
-    ClimateState["albedo"] = albedo
+    ClimateState["F_ha"] = F_ha
+    ClimateState["F_ao"] = F_ao
+    ClimateState["F_oa"] = F_oa
+    ClimateState["F_la"] = F_la
+    ClimateState["F_al"] = F_al
+    ClimateState["year"] += dtime
 
     # Return the new climate state
     return ClimateState

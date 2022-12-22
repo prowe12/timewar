@@ -12,6 +12,18 @@ from copy import deepcopy as makeacopy
 import numpy as np
 
 
+def is_same(arr1, arr2):
+    """
+    Throw an error if the two arrays are not the same
+
+    @param arr1  First array
+    @param arr2  Second array
+    @thrwos ValueError
+    """
+    if len(arr1) != len(arr2) or not np.allclose(arr1, arr2):
+        raise ValueError("Failed QC: arrays differ!")
+
+
 def CreateClimateState(climate_params: dict):
     """
     Create a new climate state with default values (preindustrial)
