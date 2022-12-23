@@ -85,7 +85,7 @@ start_year = 1750.0
 stop_year = 2200.0
 dtime = 1.0  # time resolution (years)
 inv_time_constant = 0.025
-transition_year = 2040.0  # pivot year to start decreasing CO2
+transition_year = 2040.0  # year to start decreasing CO2
 transition_duration = 20.0  # years over which to decrease co2
 long_term_emissions = 2.0  # ongoing carbon emissions after decarbonization
 # For feedbacks and stochastic runs

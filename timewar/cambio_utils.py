@@ -132,12 +132,30 @@ def make_emissions_scenario(
     return eps_0 * myexp / origexp * mysigmadown
 
 
+def make_emissions_scenario2(time, k, t_peak, delta_t_trans):
+    """
+    Returns an emissions scenario parameterized by the year of peak emissions
+    @param time
+    @param k
+    @param t_peak  Year of peak carbon
+    @param delta_t_trans  Transition time interval
+    """
+    term1 = (
+        np.exp(t_peak / delta_t_trans) ** 3
+        * (k * delta_t_trans - 3)
+        / (-k * delta_t_trans)
+    )
+    term2 = np.log(term1)
+    t_trans = term2 / 3 * delta_t_trans
+    return make_emissions_scenario(time, k, t_trans, delta_t_trans)
+
+
 def make_emissions_scenario_lte(
     t_start: float,
     t_stop: float,
     dtime: float,
     k: float,
-    t_trans: float,
+    t_peak: float,
     delta_t: float,
     epslongterm: float,
 ):
@@ -146,13 +164,13 @@ def make_emissions_scenario_lte(
 
     @param t_start, t_stop, dtime
     @param k
-    @param t_trans  Transition time (years)
+    @param t_peak  Year of peak carbon
     @param delta_t_trans  Transition time interval
     @param epslongterm  Long term CO2 emissions
     @returns time
     @returns neweps  Anthropogenic CO2 emissions, with time
     """
     time = np.arange(t_start, t_stop, dtime)
-    eps = make_emissions_scenario(time, k, t_trans, delta_t)
+    eps = make_emissions_scenario2(time, k, t_peak, delta_t)
     neweps = post_peak_flattener(time, eps, delta_t, epslongterm)
     return time, neweps
