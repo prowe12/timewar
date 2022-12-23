@@ -7,7 +7,7 @@ Created on Wed Dec 21 16:16:15 2022
 """
 
 # Start with an empty dictionary
-climate_params = {}
+climate_params: dict[str, float] = {}
 
 # Preindustrial climate values
 climate_params["preindust_c_atm"] = 615

@@ -9,25 +9,28 @@ By Steven Neshyba
 With modifications by Penny Rowe and Daniel Neshyba-Rowe
 """
 from copy import deepcopy as makeacopy
+from typing import Any
 import numpy as np
+
+from climate_params import ClimateParams
 
 
 def propagate_climate_state(
-    prevClimateState,
-    climateParams,
-    dtime=1,
-    F_ha=0,
-    albedo_with_no_constraint=False,
-    albedo_feedback=False,
-    stochastic_C_atm=False,
-    temp_anomaly_feedback=False,
-):
+    prevClimateState: dict[str, Any],
+    climateParams: ClimateParams,
+    dtime: float = 1,
+    F_ha: float = 0,
+    albedo_with_no_constraint: bool = False,
+    albedo_feedback: bool = False,
+    stochastic_C_atm: bool = False,
+    temp_anomaly_feedback: bool = False,
+) -> dict[str, Any]:
     """
     Propagate the state of the climate, with a specified anthropogenic
     carbon flux
 
     @param prevClimateState
-    @param ClimateParams  Climate params class
+    @param climateParams  Climate params class
     @param climparams, dtime, F_ha
     @returns dictionary of climate state
 
@@ -209,7 +212,7 @@ def CollectClimateTimeSeries(climatestate_list, whatIwant):
     return array
 
 
-def Diagnose_actual_temperature(T_anomaly):
+def Diagnose_actual_temperature(T_anomaly: float) -> float:
     """
     Compute degrees C from a temperature anomaly
 
@@ -220,7 +223,7 @@ def Diagnose_actual_temperature(T_anomaly):
     return T_C
 
 
-def Diagnose_degreesF(T_C):
+def Diagnose_degreesF(T_C: float) -> float:
     """
     Convert temperature from C to F
 

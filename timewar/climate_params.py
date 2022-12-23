@@ -34,9 +34,7 @@ class ClimateParams:
     k_ao = 0.114
 
     # Parameter for the ocean degassing flux feedback
-    ocean_degas_flux_feedback = (
-        0.034  # Pretty well known from physical chemistry
-    )
+    ocean_degas_flux_feedback = 0.034  # Pretty well known from physical chemistry
 
     # Parameters for albedo feedback
     # Based on our radiative balance sensitivity analysis
@@ -58,7 +56,7 @@ class ClimateParams:
     # Maximum of 10% reduction in F_al (a guess)
     fractional_flux_al_floor = 0.9
 
-    def __init__(self, stochastic_c_atm_std_dev=0.1):
+    def __init__(self, stochastic_c_atm_std_dev: float = 0.1) -> None:
         """
         Create an instance of the class
 
@@ -68,7 +66,7 @@ class ClimateParams:
         # Parameter for stochastic processes (0 for no randomness in c_atm)
         self.stochastic_c_atm_std_dev = stochastic_c_atm_std_dev
 
-    def diagnose_ocean_surface_ph(self, c_atm):
+    def diagnose_ocean_surface_ph(self, c_atm: float) -> float:
         """
         Compute ocean pH as a function of atmospheric CO2
 
@@ -85,7 +83,7 @@ class ClimateParams:
         # Return our diagnosed pH value
         return ph
 
-    def diagnose_temp_anomaly(self, c_atm):
+    def diagnose_temp_anomaly(self, c_atm: float) -> float:
         """
         Compute a temperature anomaly from the atmospheric carbon amount
         @param c_atm
@@ -94,7 +92,7 @@ class ClimateParams:
         clim_sens = ClimateParams.climate_sensitivity
         return clim_sens * (c_atm - ClimateParams.preindust_c_atm)
 
-    def diagnose_flux_atm_ocean(self, c_atm):
+    def diagnose_flux_atm_ocean(self, c_atm: float):
         """
         Compute flux of carbon from atm to ocean
 
@@ -109,7 +107,7 @@ class ClimateParams:
         # Return the diagnosed flux
         return flux_atm_ocean
 
-    def diagnose_flux_ocean_atm(self, c_ocean, temp_anomaly):
+    def diagnose_flux_ocean_atm(self, c_ocean: float, temp_anomaly: float) -> float:
         """
         Compute a temperature-dependent degassing flux of carbon from the ocean
 
@@ -121,7 +119,7 @@ class ClimateParams:
         k_oa = ClimateParams.k_oa
         return k_oa * (1 + ocean_degas_ff * temp_anomaly) * c_ocean
 
-    def diagnose_flux_atm_land(self, temp_anomaly, c_atm):
+    def diagnose_flux_atm_land(self, temp_anomaly: float, c_atm: float) -> float:
         """
         Compute the terrestrial carbon sink
 
@@ -149,7 +147,9 @@ class ClimateParams:
         """
         return ClimateParams.k_la
 
-    def diagnose_albedo_w_constraint(self, temp_anom, prev_albedo=0, dtime=0):
+    def diagnose_albedo_w_constraint(
+        self, temp_anom: float, prev_albedo: float = 0, dtime: float = 0
+    ) -> float:
         """
         Return the albedo as a function of temperature, constrained so the
         change can't exceed a certain amount per year, if so flagged
@@ -171,7 +171,7 @@ class ClimateParams:
                 albedo = prev_albedo + this_albedo_change
         return albedo
 
-    def diagnose_albedo(self, temp_anom):
+    def diagnose_albedo(self, temp_anom: float) -> float:
         """
         Return the albedo as a function of temperature anomaly
 
@@ -185,7 +185,7 @@ class ClimateParams:
         albedo = sigmafloor(temp_anom, temp, interval, floor) * preind_albedo
         return albedo
 
-    def diagnose_delta_t_from_albedo(self, albedo):
+    def diagnose_delta_t_from_albedo(self, albedo: float) -> float:
         """
         Compute additional planetary temperature increase resulting
         from a lower albedo. Based on the idea of radiative balance, ASR = OLR
@@ -197,16 +197,14 @@ class ClimateParams:
         preindust_albedo = ClimateParams.preindust_albedo
         return (albedo - preindust_albedo) * alb_sens
 
-    def diagnose_stochastic_c_atm(self, c_atm):
+    def diagnose_stochastic_c_atm(self, c_atm: float):
         """
         Return a noisy version of the atmospheric carbon
 
         @param c_atm  Atmospheric carbon
         @returns  Atmospheric carbon amount randomized based on std dev
         """
-        c_atm_new = np.random.normal(
-            c_atm, ClimateParams.stochastic_c_atm_std_dev
-        )
+        c_atm_new = np.random.normal(c_atm, self.stochastic_c_atm_std_dev)
         return c_atm_new
 
 

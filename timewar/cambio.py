@@ -67,8 +67,9 @@
 #    - constraint on how fast Earth's albedo can change
 
 
-import matplotlib.pyplot as plt
+from typing import Any
 import numpy as np
+import numpy.typing as npt
 
 
 from cambio_utils import make_emissions_scenario_lte, is_same
@@ -80,21 +81,21 @@ from cambio_utils import Diagnose_actual_temperature
 
 
 def cambio(
-    start_year,
-    stop_year,
-    dtime,
-    inv_time_constant,
-    transition_year,
-    transition_duration,
-    long_term_emissions,
-    stochastic_c_atm_std_dev,
-    albedo_with_no_constraint,
-    albedo_feedback,
-    stochastic_C_atm,
-    temp_anomaly_feedback,
-    temp_units,
-    flux_type,
-    plot_flux_diffs,
+    start_year: float,
+    stop_year: float,
+    dtime: float,
+    inv_time_constant: float,
+    transition_year: float,
+    transition_duration: float,
+    long_term_emissions: float,
+    stochastic_c_atm_std_dev: float,
+    albedo_with_no_constraint: bool,
+    albedo_feedback: bool,
+    stochastic_C_atm: bool,
+    temp_anomaly_feedback: bool,
+    temp_units: str,
+    flux_type: str,
+    plot_flux_diffs: bool,
 ):
     """
     start_year = 1750.0
@@ -147,7 +148,7 @@ def cambio(
 
     # Make the starting state the preindustrial
     # Create an empty climate state
-    climatestate = {}
+    climatestate: dict[str, float] = {}
     # Fill in some default (preindustrial) values
     climatestate["C_atm"] = climate_params["preindust_c_atm"]
     climatestate["C_ocean"] = climate_params["preindust_c_ocean"]
@@ -166,7 +167,7 @@ def cambio(
 
     # Initialize the dictionary that will hold the time series
     ntimes = len(time)
-    climate = {}
+    climate: dict[str, npt.NDArray[Any]] = {}
     for key in climatestate:
         climate[key] = np.zeros(ntimes)
 
@@ -186,23 +187,21 @@ def cambio(
     if not is_same(time, climate["year"]):
         raise ValueError("The input and output times differ!")
     if not is_same(flux_human_atm, climate["F_ha"]):
-        raise ValueError(
-            "The input and output anthropogenic emissions differ!"
-        )
+        raise ValueError("The input and output anthropogenic emissions differ!")
 
     return climate, climate_params
 
 
 def propagate_climate_state(
-    prev_climatestate,
-    climateParams,
-    dtime=1,
-    F_ha=0,
-    albedo_with_no_constraint=False,
-    albedo_feedback=False,
-    stochastic_C_atm=False,
-    temp_anomaly_feedback=False,
-):
+    prev_climatestate: dict[str, float],
+    climateParams: ClimateParams,
+    dtime: float = 1,
+    F_ha: float = 0,
+    albedo_with_no_constraint: bool = False,
+    albedo_feedback: bool = False,
+    stochastic_C_atm: bool = False,
+    temp_anomaly_feedback: bool = False,
+) -> dict[str, float]:
     """
     Propagate the state of the climate, with a specified anthropogenic
     carbon flux
@@ -253,7 +252,7 @@ def propagate_climate_state(
 
     # Get a new temperature anomaly as impacted by albedo (if we want it)
     if albedo_feedback:
-        t_anom += climateParams.diagnose_delta_temmp_from_albedo(albedo)
+        t_anom += climateParams.diagnose_delta_t_from_albedo(albedo)
 
     # Stochasticity in the model (if we want it)
     if stochastic_C_atm:
@@ -265,7 +264,7 @@ def propagate_climate_state(
     # T_F = Diagnose_degreesF(T_C)
 
     # Create a new climate state with these updates
-    climatestate = {}
+    climatestate: dict[str, float] = {}
     climatestate["C_atm"] = c_atm
     climatestate["C_ocean"] = c_ocean
     climatestate["albedo"] = albedo

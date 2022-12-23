@@ -9,10 +9,12 @@ By Steven Neshyba
 Refactored by Penny Rowe and Daniel Neshyba-Rowe
 """
 from copy import deepcopy as makeacopy
+from typing import Any
 import numpy as np
+import numpy.typing as npt
 
 
-def is_same(arr1: np.ndarray, arr2: np.ndarray) -> bool:
+def is_same(arr1: npt.NDArray[Any], arr2: npt.NDArray[Any]) -> bool:
     """
     Throw an error if the two arrays are not the same
 
@@ -23,7 +25,9 @@ def is_same(arr1: np.ndarray, arr2: np.ndarray) -> bool:
     return len(arr1) == len(arr2) and np.allclose(arr1, arr2)
 
 
-def sigmafloor(t_in, t_transition, t_interval, floor):
+def sigmafloor(
+    t_in: float, t_transition: float, t_interval: float, floor: float
+) -> float:
     """
     Generate a sigmoid (smooth step-down) function with a floor
 
@@ -36,7 +40,9 @@ def sigmafloor(t_in, t_transition, t_interval, floor):
     return temp * (1 - floor) + floor
 
 
-def sigmaup(t_in, transitiontime, transitiontimeinterval):
+def sigmaup(
+    t_in: float | npt.NDArray[Any], transitiontime: float, transitiontimeinterval: float
+) -> npt.NDArray[Any]:
     """
     Generate a sigmoid (smooth step-up) function
 
@@ -48,7 +54,9 @@ def sigmaup(t_in, transitiontime, transitiontimeinterval):
     return 1 / denom
 
 
-def sigmadown(t_in, transitiontime, transitiontimeinterval):
+def sigmadown(
+    t_in: float | npt.NDArray[Any], transitiontime: float, transitiontimeinterval: float
+) -> npt.NDArray[Any]:
     """
     Generate a sigmoid (smooth step-down) function
 
@@ -59,7 +67,7 @@ def sigmadown(t_in, transitiontime, transitiontimeinterval):
     return 1 - sigmaup(t_in, transitiontime, transitiontimeinterval)
 
 
-def Diagnose_actual_temperature(T_anomaly):
+def Diagnose_actual_temperature(T_anomaly: float) -> float:
     """
     Compute degrees C from a temperature anomaly
 
@@ -70,13 +78,14 @@ def Diagnose_actual_temperature(T_anomaly):
     return T_C
 
 
-def Diagnose_degreesF(T_C):
+def Diagnose_degreesF(T_C: float) -> float:
     """
     Convert temperature from C to F
 
     @param T_C
     @returns  temperature in F
     """
+    # TODO: check if this is unused, and perhaps delete
 
     # Do the conversion to F
     T_F = T_C * 9 / 5 + 32  ### END SOLUTION
@@ -85,7 +94,12 @@ def Diagnose_degreesF(T_C):
     return T_F
 
 
-def post_peak_flattener(time, eps, transitiontimeinterval, epslongterm):
+def post_peak_flattener(
+    time: npt.NDArray[Any],
+    eps: npt.NDArray[Any],
+    transitiontimeinterval: float,
+    epslongterm: float,
+) -> npt.NDArray[Any]:
     """
     Flatten the post peak
 
@@ -106,11 +120,11 @@ def post_peak_flattener(time, eps, transitiontimeinterval, epslongterm):
 
 
 def make_emissions_scenario(
-    time: np.ndarray,
+    time: npt.NDArray[Any],
     inv_t_const: float,
     transitionyear: float,
     transitionduration: float,
-):
+) -> npt.NDArray[Any]:
     """
     Make the emissions scenario
 
@@ -132,7 +146,9 @@ def make_emissions_scenario(
     return eps_0 * myexp / origexp * mysigmadown
 
 
-def make_emissions_scenario2(time, k, t_peak, delta_t_trans):
+def make_emissions_scenario2(
+    time: npt.NDArray[Any], k: float, t_peak: float, delta_t_trans: float
+) -> npt.NDArray[Any]:
     """
     Returns an emissions scenario parameterized by the year of peak emissions
     @param time
@@ -158,7 +174,7 @@ def make_emissions_scenario_lte(
     t_peak: float,
     delta_t: float,
     epslongterm: float,
-):
+) -> tuple[npt.NDArray[Any], npt.NDArray[Any]]:
     """
     Make emissions scenario with long term emissions
 

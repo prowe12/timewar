@@ -6,11 +6,15 @@ Created on Thu Dec 22 15:49:31 2022
 @author: prowe
 """
 
+from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 
 
-def make_plots_like_stevens(climate, fractional_albedo_floor):
+def make_plots_like_stevens(
+    climate: dict[str, npt.NDArray[Any]], fractional_albedo_floor: float
+) -> None:
     # # # #   Visualize the results of the run   # # # #
     # Plotting parameters:
     lwidth = 2
@@ -130,10 +134,10 @@ def make_plots_like_stevens(climate, fractional_albedo_floor):
             yval = -climate["F_al"] + climate["F_la"]
         else:
             yval = climate[varname]
-        plt.plot(
-            time, yval, label=labels[i], color=colors[i], linewidth=lwidth
-        )
+        plt.plot(time, yval, label=labels[i], color=colors[i], linewidth=lwidth)
     plt.grid(True)
     plt.xlabel("time (years)")
     plt.ylabel(ylabel)
     plt.legend()
+
+    plt.show()
