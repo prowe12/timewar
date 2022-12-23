@@ -65,15 +65,7 @@
 #    - constraint on how fast Earth's albedo can change
 
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-
-from cambio_utils import make_emissions_scenario_lte, is_same
-from cambio import propagate_climate_state
-import preindustrial_inputs
-from climate_params import ClimateParams
-
+from cambio import cambio
 
 # ### Introducing the "LTE" emissions scenario maker
 # The emissions scenario maker.
@@ -109,27 +101,7 @@ flux_type = "/year"  # total, per year
 plot_flux_diffs = True  # True, False
 # # # # # #  # # # # # # # # # # # #
 
-
-# Units of variables output by climate model:
-# C_atm and C_ocean: GtC, I think
-# T_anomaly: K
-# F_al, F_la, F_ao, F_oa, F_ha: GtC/year
-
-
-# Unit conversions
-# Convert carbon amounts from GtC
-c_conversion_fac = {"GtC": 1, "GtCO2": 1 / 0.27, "ppm": 1 / 2.12}
-# TODO: Add conversion for F
-temp_conversion_fac = {"K": 1, "C": 273.15, "F": np.nan}
-# TODO: Do not use for anomaly, since K and C will be the same.
-#       need fancy code to convert to F
-
-
-# Call the LTE emissions scenario maker with these parameters
-# time is in years
-# flux_human_atm is in GtC/year
-# would be good to output units
-time, flux_human_atm = make_emissions_scenario_lte(
+climate, climate_params = cambio(
     start_year,
     stop_year,
     dtime,
@@ -137,177 +109,18 @@ time, flux_human_atm = make_emissions_scenario_lte(
     transition_year,
     transition_duration,
     long_term_emissions,
+    stochastic_c_atm_std_dev,
+    albedo_with_no_constraint,
+    albedo_feedback,
+    stochastic_C_atm,
+    temp_anomaly_feedback,
+    temp_units,
+    flux_type,
+    plot_flux_diffs,
 )
 
 
-# ### Creating a preindustrial Climate State
-# containing the climate state containing preindustrial parameters.
-# We've set the starting year to what was specified above when you
-# created your scenario.
-climate_params = preindustrial_inputs.climate_params
-climateParams = ClimateParams(stochastic_c_atm_std_dev)
+# Test - recreate Steven's plots and make sure they look ok
+from make_plots_like_stevens import make_plots_like_stevens
 
-
-# Propagating through time
-
-# Make the starting state the preindustrial
-# Create an empty climate state
-climatestate = {}
-# Fill in some default (preindustrial) values
-climatestate["C_atm"] = climate_params["preindust_c_atm"]
-climatestate["C_ocean"] = climate_params["preindust_c_ocean"]
-climatestate["albedo"] = climate_params["preindust_albedo"]
-climatestate["T_anomaly"] = 0
-# These are just placeholders (values don't mean anything)
-climatestate["pH"] = 0
-climatestate["T_C"] = 0
-climatestate["T_F"] = 0
-climatestate["F_ha"] = 0
-climatestate["F_ao"] = 0
-climatestate["F_oa"] = 0
-climatestate["F_al"] = 0
-climatestate["F_la"] = 0
-climatestate["year"] = time[0] - dtime
-
-
-# Initialize the dictionary that will hold the time series
-ntimes = len(time)
-climate = {}
-for key in climatestate:
-    climate[key] = np.zeros(ntimes)
-
-
-# Loop over all the times in the scheduled flow
-for i in range(len(time)):
-
-    # Propagate
-    climatestate = propagate_climate_state(
-        climatestate, climateParams, dtime, F_ha=flux_human_atm[i]
-    )
-
-    # Append to climate variables
-    for key in climatestate:
-        climate[key][i] = climatestate[key]
-
-
-# QC: make sure the input and output times and human co2 emissions are same
-if not is_same(time, climate["year"]):
-    raise ValueError("The input and output times differ!")
-if not is_same(flux_human_atm, climate["F_ha"]):
-    raise ValueError("The input and output anthropogenic emissions differ!")
-
-
-# # # #   Visualize the results of the run   # # # #
-# Plotting parameters:
-lwidth = 2
-
-# Plot Anthropogenic emissions in GtC/year
-c_units = "GtC"  # GtC, GtCO2, atm
-flux_type = "/year"  # total, per year
-yvals = [flux_human_atm]
-lables = ["Anthropogenic Emissions"]
-plt.figure()
-for i, yval in enumerate(yvals):
-    plt.plot(time, yval * c_conversion_fac[c_units], label=lables[i])
-plt.legend()
-plt.grid(True)
-plt.xlabel("year")
-plt.ylabel(c_units + flux_type)
-
-# Plot the concentration of carbon in the atmosphere and oceans,
-# in GtC (one graph)
-c_units = "GtC"
-plot_me = ["C_atm", "C_ocean"]
-labels = ["C_atm", "C_ocean"]
-flux_type = ""
-plt.figure()
-for i, varname in enumerate(plot_me):
-    label = f"{labels[i]} ({c_units})"
-    yval = climate[varname] * c_conversion_fac[c_units]
-    plt.plot(time, yval, label=label, linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(c_units + flux_type)
-plt.legend()
-
-# Re-plot the carbon in the atmosphere, converted to ppm (by dividing
-# C_atm_array by 2.12)
-c_units = "ppm"
-plot_me = ["C_atm"]
-labels = ["C_atm"]
-flux_type = ""
-plt.figure()
-for i, varname in enumerate(plot_me):
-    yval = climate[varname] * c_conversion_fac[c_units]
-    label = f"{labels[i]} ({c_units})"
-    plt.plot(time, yval, label=label, linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(c_units + flux_type)
-plt.legend()
-
-# Extract and plot the albedo
-plot_me = ["albedo"]
-labels = ["Albedo"]
-plt.figure()
-for i, varname in enumerate(plot_me):
-    yval = climate[varname]
-    plt.plot(time, yval, label=f"{labels[i]}", linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel("albedo")
-plt.legend()
-# TODO: Find a better solution for this
-ybottom = yval[0] * climate_params["fractional_albedo_floor"] - 0.01
-ytop = yval[0] + 0.001
-plt.ylim([ybottom, ytop])
-
-# plot the ocean pH, specifying vertical axis limits of 7.8 to 8.3
-varname = "pH"
-yval = climate[varname]
-plt.figure()
-plt.plot(time, yval, label="pH", linewidth=lwidth, color="gray")
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(varname)
-plt.legend()
-# TODO: Find a better way to set the ylims
-ybottom = 7.8
-ytop = 8.3
-plt.ylim([ybottom, ytop])
-
-# TODO: Fix the way colors are handled
-
-# Extract and plot the temperature anomaly
-varname = "T_anomaly"
-yval = climate[varname]
-label = "Temperature anomaly"
-plt.figure()
-plt.plot(time, yval, label=label, linewidth=lwidth, color="red")
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel("degrees K")
-plt.legend()
-
-# Extract the fluxes, compute net fluxes, and plot them
-plot_flux_diffs = True  # True, False
-plot_me = ["F_ha", "F_oa", "F_la"]
-labels = ["F_ha", "F_la-F_al", "F_oa-F_ao"]
-colors = ["black", "brown", "blue"]
-if plot_flux_diffs:
-    ylabel = "Flux differences (GtC/year)"
-else:
-    raise ValueError("option not here yet")
-plt.figure()
-for i, varname in enumerate(plot_me):
-    if plot_flux_diffs and varname == "F_oa":
-        yval = -climate["F_ao"] + climate["F_oa"]
-    elif plot_flux_diffs and varname == "F_la":
-        yval = -climate["F_al"] + climate["F_la"]
-    else:
-        yval = climate[varname]
-    plt.plot(time, yval, label=labels[i], color=colors[i], linewidth=lwidth)
-plt.grid(True)
-plt.xlabel("time (years)")
-plt.ylabel(ylabel)
-plt.legend()
+make_plots_like_stevens(climate, climate_params["fractional_albedo_floor"])
