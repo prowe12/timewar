@@ -8,6 +8,7 @@ authors = ["Daniel Neshyba-Rowe <rowedanielp@gmail.com>", "Penny Rowe <prowe@har
 python = "^3.10"
 numpy = "^1.24.0"
 matplotlib = "^3.6.2"
+PyQt5 = "^5.15.7"
 
 [tool.poetry.dev-dependencies]
 black = "^22.12.0"
