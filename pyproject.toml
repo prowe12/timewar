@@ -2,7 +2,7 @@
 name = "timewar"
 version = "0.1.0"
 description = ""
-authors = ["Daniel Neshyba-Rowe <daniel.rowe@playgroundlabs.io>"]
+authors = ["Daniel Neshyba-Rowe <rowedanielp@gmail.com>", "Penny Rowe <prowe@harbornet.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
